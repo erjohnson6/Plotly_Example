@@ -1,0 +1,74 @@
+---
+title: "Plotly Example Presentation"
+author: "Eric Johnson"
+date: "10/14/2020"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Instructions
+
+Create a web page presentation using R Markdown that features a plot created with Plotly. Host your webpage on either GitHub Pages, RPubs, or NeoCities. Your webpage must contain the date that you created the document, and it must contain a plot created with Plotly. We would love to see you show off your creativity!
+
+
+## Getting the Data
+
+The first step will be to get the latest CoVID-19 data. This code is borrowed from other 
+personal interest work that I've done thus it isn't perfectly (or even well) optimized for
+inclusion in a R markdown file, but it will work all the same.
+
+```{r GetData, cache=TRUE, include=FALSE}
+suppressWarnings(suppressPackageStartupMessages(library(data.table)))
+suppressPackageStartupMessages(library(dplyr))
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(lubridate))
+suppressPackageStartupMessages(library(plotly))
+
+getConfirmed <- function(forceNew = FALSE) {
+     #### Download Data ####
+     #### 
+     webpath <- "https://data.humdata.org/hxlproxy/data/download/time_series_covid19_confirmed_global_narrow.csv?dest=data_edit&filter01=explode&explode-header-att01=date&explode-value-att01=value&filter02=rename&rename-oldtag02=%23affected%2Bdate&rename-newtag02=%23date&rename-header02=Date&filter03=rename&rename-oldtag03=%23affected%2Bvalue&rename-newtag03=%23affected%2Binfected%2Bvalue%2Bnum&rename-header03=Value&filter04=clean&clean-date-tags04=%23date&filter05=sort&sort-tags05=%23date&sort-reverse05=on&filter06=sort&sort-tags06=%23country%2Bname%2C%23adm1%2Bname&tagger-match-all=on&tagger-default-tag=%23affected%2Blabel&tagger-01-header=province%2Fstate&tagger-01-tag=%23adm1%2Bname&tagger-02-header=country%2Fregion&tagger-02-tag=%23country%2Bname&tagger-03-header=lat&tagger-03-tag=%23geo%2Blat&tagger-04-header=long&tagger-04-tag=%23geo%2Blon&header-row=1&url=https%3A%2F%2Fraw.githubusercontent.com%2FCSSEGISandData%2FCOVID-19%2Fmaster%2Fcsse_covid_19_data%2Fcsse_covid_19_time_series%2Ftime_series_covid19_confirmed_global.csv"
+     
+     colType <- c("factor", "factor", "numeric", "numeric", "Date", "integer")
+     if(forceNew){ 
+          download.file(webpath, 
+                        destfile = './time_series_covid19_confirmed_global_narrow.csv', mode='wb') 
+     }
+     covid19TS <- read.csv("time_series_covid19_confirmed_global_narrow.csv", 
+                           comment.char = "#", colClasses = colType)
+     covid19TS <- as_tibble(covid19TS)
+     rename(covid19TS, Confirmed = Value)
+}
+
+confirmed <- getConfirmed()
+Europe <- c("Italy", "Spain", "Germany", "Austria") ## Subset of European Countries
+StartDate <- "2020-03-01"
+confirmed <- subset(confirmed, Date >= StartDate)
+Europe.Confirmed <- subset(confirmed, Country.Region == Europe[1])
+for (i in 2:4) { 
+   Europe.Confirmed <- rbind(Europe.Confirmed, subset(confirmed, Country.Region == Europe[i]))
+}
+Europe.Confirmed$Country.Region <- factor(Europe.Confirmed$Country.Region)
+Europe.Confirmed$Province.State <- factor(Europe.Confirmed$Province.State)
+
+```
+For the sake of brevity we'll only look at the first few lines:
+
+``` {r Head}
+head(Europe.Confirmed)
+```
+
+
+## Making a Plotly Graph
+
+Let's see how this looks on a graph:
+``` {r graf}
+plot_ly(data = Europe.Confirmed, x = ~Date, y = ~Confirmed, 
+        color = ~Country.Region, type = "scatter", mode = "lines")
+
+```
+
+It appears that Spain has some work to do in surpressing COVID19 in their country.
